@@ -7,7 +7,7 @@ route:
 receivers:
   - name: 'web.hook'
     dynatrace_configs:
-      - url: 'http://127.0.0.1:5001/'
+      - url: 'http://127.0.0.2:5001/'
 inhibit_rules:
   - source_match:
       severity: 'critical'

@@ -1007,7 +1007,7 @@ type DynatraceConfig struct {
 	NotifierConfig `yaml:",inline" json:",inline"`
 	HTTPConfig     *commoncfg.HTTPClientConfig `yaml:"http_config,omitempty" json:"http_config,omitempty"`
 	URL            *SecretURL                  `yaml:"url" json:"url"`
-	URLFile        string                      `yaml:"webhook_url_file,omitempty" json:"webhook_url_file,omitempty"`
+	URLFile        string                      `yaml:"dynatrace_url_file,omitempty" json:"dynatrace_url_file,omitempty"`
 }
 
 func (c *DynatraceConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {

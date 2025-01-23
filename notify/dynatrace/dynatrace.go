@@ -23,8 +23,8 @@ type Notifier struct {
 }
 
 func New(conf *config.DynatraceConfig, t *template.Template, l *slog.Logger, httpOpts ...commoncfg.HTTPClientOption) (*Notifier, error){
-	l.Info("hey")
-	client, err := commoncfg.NewClientFromConfig(*conf.HTTPConfig, "webhook", httpOpts...)
+	l.Info("set up Dynatrace receiver", "endpoint", conf.URL.String())
+	client, err := commoncfg.NewClientFromConfig(*conf.HTTPConfig, "dynatrace", httpOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -40,6 +40,7 @@ func New(conf *config.DynatraceConfig, t *template.Template, l *slog.Logger, htt
 }
 
 func (n *Notifier) Notify(ctx context.Context, as ...*types.Alert) (bool, error) {
+	log.Println(n.conf.URL)
 
 	for _, alert := range as {
 		log.Println(alert.Name())
