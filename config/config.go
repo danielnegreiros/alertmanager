@@ -298,6 +298,9 @@ func resolveFilepaths(baseDir string, cfg *Config) {
 		for _, cfg := range receiver.RocketchatConfigs {
 			cfg.HTTPConfig.SetDirectory(baseDir)
 		}
+		for _, cfg := range receiver.DynatraceConfigs {
+			cfg.HTTPConfig.SetDirectory(baseDir)
+		}
 	}
 }
 
@@ -632,7 +635,14 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 				rocketchat.TokenFile = c.Global.RocketchatTokenFile
 			}
 		}
-
+		for _, dynatrace := range rcv.DynatraceConfigs {
+			if dynatrace.HTTPConfig == nil {
+				dynatrace.HTTPConfig = c.Global.HTTPConfig
+			}
+			if dynatrace.URL == nil && len(dynatrace.URLFile) == 0 {
+				return errors.New("no dynatrace webhook URL or URLFile provided")
+			}
+		}
 		names[rcv.Name] = struct{}{}
 	}
 
@@ -1026,6 +1036,7 @@ type Receiver struct {
 	MSTeamsV2Configs  []*MSTeamsV2Config  `yaml:"msteamsv2_configs,omitempty" json:"msteamsv2_configs,omitempty"`
 	JiraConfigs       []*JiraConfig       `yaml:"jira_configs,omitempty" json:"jira_configs,omitempty"`
 	RocketchatConfigs []*RocketchatConfig `yaml:"rocketchat_configs,omitempty" json:"rocketchat_configs,omitempty"`
+	DynatraceConfigs  []*DynatraceConfig  `yaml:"dynatrace_configs,omitempty" json:"dynatrace_configs,omitempty"`
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface for Receiver.

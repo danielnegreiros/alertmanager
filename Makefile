@@ -86,3 +86,8 @@ clean:
 test: $(GOTEST_DIR)
 	@echo ">> running all tests, except notify/email"
 	$(GOTEST) $(test-flags) $(GOOPTS) `go list ./... | grep -v notify/email`
+
+.PHONY: run
+run:
+	@echo ">> start app"
+	./alertmanager --config.file=examples/ha/alertmanager.yml --cluster.listen-address=:9095 --web.listen-address=:9096
