@@ -1005,9 +1005,17 @@ func (c *RocketchatConfig) UnmarshalYAML(unmarshal func(interface{}) error) erro
 
 type DynatraceConfig struct {
 	NotifierConfig `yaml:",inline" json:",inline"`
+
 	HTTPConfig     *commoncfg.HTTPClientConfig `yaml:"http_config,omitempty" json:"http_config,omitempty"`
 	URL            *SecretURL                  `yaml:"url" json:"url"`
 	URLFile        string                      `yaml:"dynatrace_url_file,omitempty" json:"dynatrace_url_file,omitempty"`
+	EntitySelector *DynatraceEntitySelector    `yaml:"entity_selector,omitempty" json:"entity_selector,omitempty"`
+}
+
+type DynatraceEntitySelector struct {
+	Type       string `yaml:"type,omitempty" json:"type,omitempty"`
+	Label      string `yaml:"label,omitempty" json:"label,omitempty"`
+	Expression string `yam:"expression,omitempty" json:"expression,omitempty"`
 }
 
 func (c *DynatraceConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {

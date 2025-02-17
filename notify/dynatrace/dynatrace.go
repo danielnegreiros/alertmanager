@@ -1,8 +1,10 @@
 package dynatrace
 
 import (
+	"bytes"
 	"context"
-	"log"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -14,6 +16,49 @@ import (
 	"github.com/prometheus/alertmanager/types"
 )
 
+func getEntitySelectorExpr(type_ string, value string) string {
+	switch type_ {
+	case "cloud_app_instance":
+		return fmt.Sprintf("type(CLOUD_APPLICATION_INSTANCE),entityName.contains(%s)", value)
+	case "custom_expression":
+		return value
+	default:
+		return ""
+	}
+}
+
+// dynatraceEvent is a struct Dynatrace Problem Event representation
+type dynatraceEvent struct {
+	EventType        string            `json:"eventType"`
+	Title            string            `json:"title"`
+	Source           string            `json:"source"`
+	Description      string            `json:"description"`
+	Timeout          string            `json:"timeout"`
+	CustomProperties map[string]string `json:"properties"`
+	EntitySelector   string            `json:"entitySelector,omitempty"`
+}
+
+func newDynatraceEvent(alert *types.Alert) *dynatraceEvent {
+
+	customProperties := make(map[string]string)
+	for key, value := range alert.Labels {
+		customProperties[string(key)] = string(value)
+	}
+
+	for key, value := range alert.Annotations {
+		customProperties[string(key)] = string(value)
+	}
+
+	return &dynatraceEvent{
+		EventType:        "CUSTOM_ALERT",
+		Title:            customProperties["alertname"],
+		Source:           "Prometheus Alertmanager",
+		Description:      customProperties["description"],
+		Timeout:          "15",
+		CustomProperties: customProperties,
+	}
+}
+
 type Notifier struct {
 	conf    *config.DynatraceConfig
 	tmpl    *template.Template
@@ -22,7 +67,7 @@ type Notifier struct {
 	retrier *notify.Retrier
 }
 
-func New(conf *config.DynatraceConfig, t *template.Template, l *slog.Logger, httpOpts ...commoncfg.HTTPClientOption) (*Notifier, error){
+func New(conf *config.DynatraceConfig, t *template.Template, l *slog.Logger, httpOpts ...commoncfg.HTTPClientOption) (*Notifier, error) {
 	l.Info("set up Dynatrace receiver", "endpoint", conf.URL.String())
 	client, err := commoncfg.NewClientFromConfig(*conf.HTTPConfig, "dynatrace", httpOpts...)
 	if err != nil {
@@ -40,11 +85,33 @@ func New(conf *config.DynatraceConfig, t *template.Template, l *slog.Logger, htt
 }
 
 func (n *Notifier) Notify(ctx context.Context, as ...*types.Alert) (bool, error) {
-	log.Println(n.conf.URL)
 
 	for _, alert := range as {
-		log.Println(alert.Name())
-		log.Println(alert.Labels)
+		event := newDynatraceEvent(alert)
+		if n.conf.EntitySelector != nil {
+			event.EntitySelector = getEntitySelectorExpr(n.conf.EntitySelector.Type, event.CustomProperties[n.conf.EntitySelector.Label])
+		}
+
+		buf := &bytes.Buffer{}
+		err := json.NewEncoder(buf).Encode(event)
+		if err != nil {
+			return false, fmt.Errorf("not possible to encode alert")
+		}
+
+		n.logger.Info(n.conf.URL.String())
+		resp, err := notify.PostJSON(context.TODO(), n.client, n.conf.URL.String(), buf)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusCreated {
+			return false, fmt.Errorf("not possible to senf alert")
+		}
+
+		if err != nil {
+			return false, fmt.Errorf("not possible to senf alert")
+		}
+
+		n.logger.Error("alert posted with success", "title", event.Title)
+
 	}
 
 	return false, nil
