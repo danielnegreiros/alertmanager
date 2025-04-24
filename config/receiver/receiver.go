@@ -22,6 +22,7 @@ import (
 	"github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/alertmanager/notify/discord"
+	"github.com/prometheus/alertmanager/notify/dynatrace"
 	"github.com/prometheus/alertmanager/notify/email"
 	"github.com/prometheus/alertmanager/notify/jira"
 	"github.com/prometheus/alertmanager/notify/msteams"
@@ -108,6 +109,9 @@ func BuildReceiverIntegrations(nc config.Receiver, tmpl *template.Template, logg
 	}
 	for i, c := range nc.RocketchatConfigs {
 		add("rocketchat", i, c, func(l *slog.Logger) (notify.Notifier, error) { return rocketchat.New(c, tmpl, l, httpOpts...) })
+	}
+	for i, c := range nc.DynatraceConfigs {
+		add("dynatrace", i, c, func(l *slog.Logger) (notify.Notifier, error) { return dynatrace.New(c, tmpl, l, httpOpts...) })
 	}
 
 	if errs.Len() > 0 {

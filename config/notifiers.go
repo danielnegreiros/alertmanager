@@ -203,6 +203,12 @@ var (
 		Description: `{{ template "jira.default.description" . }}`,
 		Priority:    `{{ template "jira.default.priority" . }}`,
 	}
+
+	DefaultDynatraceConfig = DynatraceConfig{
+		NotifierConfig: NotifierConfig{
+			VSendResolved: true,
+		},
+	}
 )
 
 // NotifierConfig contains base options common across all notifier configurations.
@@ -994,5 +1000,39 @@ func (c *RocketchatConfig) UnmarshalYAML(unmarshal func(interface{}) error) erro
 	if c.TokenID != nil && len(c.TokenIDFile) > 0 {
 		return errors.New("at most one of token_id & token_id_file must be configured")
 	}
+	return nil
+}
+
+type DynatraceConfig struct {
+	NotifierConfig `yaml:",inline" json:",inline"`
+
+	HTTPConfig     *commoncfg.HTTPClientConfig `yaml:"http_config,omitempty" json:"http_config,omitempty"`
+	URL            *SecretURL                  `yaml:"url" json:"url"`
+	URLFile        string                      `yaml:"dynatrace_url_file,omitempty" json:"dynatrace_url_file,omitempty"`
+	EntitySelector *DynatraceEntitySelector    `yaml:"entity_selector,omitempty" json:"entity_selector,omitempty"`
+}
+
+type DynatraceEntitySelector struct {
+	Type       string `yaml:"type,omitempty" json:"type,omitempty"`
+	Label      string `yaml:"label,omitempty" json:"label,omitempty"`
+	Expression string `yam:"expression,omitempty" json:"expression,omitempty"`
+}
+
+func (c *DynatraceConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	*c = DefaultDynatraceConfig
+	type plain DynatraceConfig
+
+	if err := unmarshal((*plain)(c)); err != nil {
+		return err
+	}
+
+	if c.URL == nil && c.URLFile == "" {
+		return errors.New("one of url or url_file must be configured")
+	}
+
+	if c.URL != nil && len(c.URLFile) > 0 {
+		return errors.New("at most one of webhook_url & webhook_url_file must be configured")
+	}
+
 	return nil
 }
